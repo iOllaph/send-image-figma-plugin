@@ -1,16 +1,66 @@
 <!DOCTYPE html>
 <html>
-<body>
-  <div>
-    <button id="send">Send Selected Frame</button>
-  </div>
+  <body>
 
-<script>
-document.getElementById('send').onclick = () => {
-  parent.postMessage({
-    pluginMessage: { type: 'send' }
-  }, '*');
-};
-</script>
-</body>
+    <div class="header-info">
+      <span class="title" id="title">CDC - Envio de imagens</span>
+      <span id="subtitle">Digite a senha para continuar</span>
+    </div>
+
+    <div class="action-container">
+      <input id="password" type="password" class="input" placeholder="Insira a senha">
+      <button id="actionButton">Confirmar senha</button>
+    </div>
+
+    <style>
+      @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@100..900&display=swap');
+      .title { font-size: 20px; font-weight: 600; }
+      .header-info { display:flex; flex-direction:column; gap:10px; align-items:center; margin-bottom:20px; }
+      .action-container { display:flex; flex-direction:column; gap:10px; }
+      body { display:flex; flex-direction:column; font-family:"Noto Sans JP", sans-serif; }
+      input { padding:10px; border:2px solid #ccc; border-radius:10px; font-size:16px; color:#555; outline:none; }
+      input:focus { border-color:#007bff; box-shadow:0 0 0 0.2rem rgba(0,123,255,0.25); }
+      button { height:40px; border-radius:10px; background:#007bff; color:white; border:none; }
+      button:active { box-shadow:0 0 0 0.2rem rgba(0,123,255,0.25); }
+    </style>
+
+    <script>
+      const titleEl = document.getElementById("title");
+      const subtitleEl = document.getElementById("subtitle");
+      const buttonEl = document.getElementById("actionButton");
+      const passwordEl = document.getElementById("password");
+
+      // Initial button behavior: login
+      buttonEl.onclick = () => {
+        parent.postMessage({
+          pluginMessage: {
+            type: "login",
+            password: passwordEl.value
+          }
+        }, "*");
+      };
+
+      // Messages from plugin
+      window.onmessage = (event) => {
+        const msg = event.data.pluginMessage;
+
+        if (msg.type === "logged-in") {
+          // Change UI after login
+          titleEl.textContent = "Selecione um frame";
+          subtitleEl.textContent = "Depois pressione enviar";
+
+          // Change button text
+          buttonEl.textContent = "Enviar imagem";
+
+          // Change button behavior
+          buttonEl.onclick = () => {
+            parent.postMessage({ pluginMessage: { type: "send" } }, "*");
+          };
+
+          // Optional: hide password field
+          passwordEl.style.display = "none";
+        }
+      };
+    </script>
+  </body>
 </html>

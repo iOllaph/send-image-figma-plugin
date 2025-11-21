@@ -1,20 +1,24 @@
-const WEBHOOK_URL = "";
-const AUTH_PASS = "";
+let webhookUrl = "";
 
-figma.showUI(__html__, { width: 300, height: 250 });
+figma.showUI(__html__, { width: 300, height: 260 });
 
-// Listen UI events
+// Load saved URL on startup
+(async () => {
+  const saved = await figma.clientStorage.getAsync("webhookUrl");
+  if (saved) {
+    webhookUrl = saved;
+    figma.ui.postMessage({ type: "logged-in", webhookUrl });
+  }
+})();
+
+// Handle UI events
 figma.ui.onmessage = async (msg) => {
-  
-  if (msg.type === "login") {
-    if (msg.password !== AUTH_PASS) {
-      figma.notify("Senha incorreta!");
-      return;
-    }
 
-    await figma.clientStorage.setAsync("session", "ok");
-    figma.ui.postMessage({ type: "logged-in" });
-    figma.notify("Logado!");
+  if (msg.type === "set-url") {
+    webhookUrl = msg.url;
+    await figma.clientStorage.setAsync("webhookUrl", webhookUrl);
+    figma.ui.postMessage({ type: "logged-in", webhookUrl });
+    figma.notify("URL configurada!");
   }
 
   if (msg.type === "send") {
@@ -26,22 +30,31 @@ async function sendImage() {
   const selection = figma.currentPage.selection;
 
   if (selection.length !== 1) {
-    figma.notify("Selecione um frame apenas!");
+    figma.notify("Selecione apenas um frame!");
+    figma.ui.postMessage({ type: "send-failed" });
     return;
   }
 
   const node = selection[0];
   const pngBytes = await node.exportAsync({ format: "PNG" });
 
-  const res = await fetch(WEBHOOK_URL, {
-    method: "POST",
-    body: new Uint8Array(pngBytes)
-  });
+  try {
+    const res = await fetch(webhookUrl, {
+      method: "POST",
+      body: new Uint8Array(pngBytes)
+    });
 
-  if (!res.ok) {
-    figma.notify("Falha ao enviar a mensage, por favor tente mais tarde!");
-    return;
+    if (!res.ok) {
+      figma.notify("Erro ao enviar imagem!");
+      figma.ui.postMessage({ type: "send-failed" });
+      return;
+    }
+
+    figma.notify("Imagem enviada!");
+    figma.ui.postMessage({ type: "send-success" });
+
+  } catch (err) {
+    figma.notify("Erro de rede!");
+    figma.ui.postMessage({ type: "send-failed" });
   }
-
-  figma.notify("Frame enviado!");
 }

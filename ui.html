@@ -3,64 +3,100 @@
   <body>
 
     <div class="header-info">
-      <span class="title" id="title">CDC - Envio de imagens</span>
-      <span id="subtitle">Digite a senha para continuar</span>
+      <span class="title" id="title">Configurar Webhook</span>
+      <span id="subtitle">Insira a URL de destino</span>
     </div>
 
     <div class="action-container">
-      <input id="password" type="password" class="input" placeholder="Insira a senha">
-      <button id="actionButton">Confirmar senha</button>
+      <input id="urlInput" type="text" class="input" placeholder="https://seu-endpoint.com/webhook">
+      <button id="actionButton">Salvar URL</button>
+
+      <button id="changeUrlButton" style="display:none; background:#555;">
+        Alterar URL
+      </button>
+
+      <div id="loading" style="display:none; text-align:center;">
+        Enviando...
+      </div>
     </div>
 
     <style>
-      @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@100..900&display=swap');
+      body { display:flex; flex-direction:column; font-family:"Noto Sans JP", sans-serif; }
       .title { font-size: 20px; font-weight: 600; }
       .header-info { display:flex; flex-direction:column; gap:10px; align-items:center; margin-bottom:20px; }
       .action-container { display:flex; flex-direction:column; gap:10px; }
-      body { display:flex; flex-direction:column; font-family:"Noto Sans JP", sans-serif; }
       input { padding:10px; border:2px solid #ccc; border-radius:10px; font-size:16px; color:#555; outline:none; }
-      input:focus { border-color:#007bff; box-shadow:0 0 0 0.2rem rgba(0,123,255,0.25); }
-      button { height:40px; border-radius:10px; background:#007bff; color:white; border:none; }
-      button:active { box-shadow:0 0 0 0.2rem rgba(0,123,255,0.25); }
+      button { height:40px; border-radius:10px; background:#007bff; color:white; border:none; cursor:pointer; }
+      button:disabled { background:#7aaef5; }
     </style>
 
     <script>
       const titleEl = document.getElementById("title");
       const subtitleEl = document.getElementById("subtitle");
       const buttonEl = document.getElementById("actionButton");
-      const passwordEl = document.getElementById("password");
+      const changeUrlBtn = document.getElementById("changeUrlButton");
+      const urlInput = document.getElementById("urlInput");
+      const loadingEl = document.getElementById("loading");
 
-      // Initial button behavior: login
-      buttonEl.onclick = () => {
-        parent.postMessage({
-          pluginMessage: {
-            type: "login",
-            password: passwordEl.value
-          }
-        }, "*");
+      // Default: save URL
+      function setSaveUrlMode() {
+        titleEl.textContent = "Configurar Webhook";
+        subtitleEl.textContent = "Insira a URL de destino";
+
+        urlInput.style.display = "block";
+        buttonEl.textContent = "Salvar URL";
+        changeUrlBtn.style.display = "none";
+
+        buttonEl.onclick = () => {
+          parent.postMessage({
+            pluginMessage: {
+              type: "set-url",
+              url: urlInput.value
+            }
+          }, "*");
+        };
+      }
+
+      // Sending mode
+      function setSendMode(savedUrl) {
+        titleEl.textContent = "Selecione um frame";
+        subtitleEl.textContent = "Depois clique para enviar";
+
+        if (savedUrl) urlInput.value = savedUrl;
+
+        urlInput.style.display = "none";
+        buttonEl.textContent = "Enviar imagem";
+        changeUrlBtn.style.display = "block";
+
+        buttonEl.onclick = () => {
+          loadingEl.style.display = "block";
+          buttonEl.disabled = true;
+
+          parent.postMessage({ pluginMessage: { type: "send" } }, "*");
+        };
+      }
+
+      // change URL button
+      changeUrlBtn.onclick = () => {
+        setSaveUrlMode();
       };
 
-      // Messages from plugin
+      // Messages from backend
       window.onmessage = (event) => {
         const msg = event.data.pluginMessage;
 
         if (msg.type === "logged-in") {
-          // Change UI after login
-          titleEl.textContent = "Selecione um frame";
-          subtitleEl.textContent = "Depois pressione enviar";
+          setSendMode(msg.webhookUrl);
+        }
 
-          // Change button text
-          buttonEl.textContent = "Enviar imagem";
-
-          // Change button behavior
-          buttonEl.onclick = () => {
-            parent.postMessage({ pluginMessage: { type: "send" } }, "*");
-          };
-
-          // Optional: hide password field
-          passwordEl.style.display = "none";
+        if (msg.type === "send-success" || msg.type === "send-failed") {
+          loadingEl.style.display = "none";
+          buttonEl.disabled = false;
         }
       };
+
+      // Start in "save url" mode
+      setSaveUrlMode();
     </script>
   </body>
 </html>

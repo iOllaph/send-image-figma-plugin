@@ -1,139 +1,111 @@
+# **Frame Relay — Export Selected Figma Frames via Webhook**
 
-# **Figma Image Sender Plugin**
-
-This Figma plugin allows you to select a frame, export it as PNG, and send the binary image directly to your self-hosted API via an HTTP POST request.
-Local authentication (username/password stored in the plugin) is supported to restrict usage.
-
----
-
-## **Features**
-
-* Local login (static username/password inside plugin code).
-* Figma UI for login and sending.
-* Exports the selected frame as PNG bytes.
-* Sends the PNG via HTTP POST to your relay server.
-* Compatible with Docker-hosted relay services.
+Frame Relay is a lightweight Figma plugin that lets you **export any selected frame as a PNG** and automatically **send it to your server via a webhook**.
+Ideal for automation pipelines, image processing systems, CDNs, prototyping flows, and custom integrations.
 
 ---
 
-## **How It Works**
+## **✨ Features**
 
-### **1. Login UI**
+* Export the selected frame as **high-quality PNG**
+* Automatically POST the image to a **custom webhook**
+* Store the webhook URL securely inside the plugin
+* One-click workflow: *select frame → send → done*
+* Simple UI with automatic mode switching
+* Supports any REST endpoint
 
-The plugin renders a simple HTML UI containing:
+---
 
-* Username input
-* Password input
-* Login button
-* “Send Selected Frame” button
+## **🚀 How It Works**
 
-The UI communicates with the plugin controller via `parent.postMessage`.
+1. Open the plugin.
+2. Enter your webhook URL and save it.
+3. Select any Figma frame.
+4. Click **Enviar imagem** to send the PNG to your server.
+5. The server receives a POST request with:
 
-### **2. Local Authentication**
+   * `image`: Base64 PNG
+   * `frameName`: name of the selected frame
+   * `timestamp`: ISO date
 
-Authentication does **not** contact any external API.
-Static credentials are defined in the plugin’s main code:
+---
 
-```js
-const AUTH_USER = "myUser123";
-const AUTH_PASS = "superSecret456";
-```
+## **📦 Payload Example**
 
-If the credentials match, the plugin stores a fake token in Figma client storage:
-
-```js
-await figma.clientStorage.setAsync("sessionToken", "local-static-token");
-```
-
-### **3. Sending the Frame**
-
-When "Send Selected Frame" is clicked:
-
-1. The plugin checks if exactly one frame is selected
-2. That frame is exported as PNG
-3. The image is sent with:
-
-```js
-fetch("http://YOUR_SERVER:8001/send-image", {
-  method: "POST",
-  body: new Uint8Array(pngBytes)
-});
-```
-
-No authorization header is used.
-
-### **4. Manifest Network Access**
-
-To allow the HTTP call, the manifest needs:
+**POST** sent to your webhook:
 
 ```json
-"networkAccess": {
-  "allowedDomains": ["*"]
+{
+  "frameName": "Home",
+  "timestamp": "2025-11-21T18:04:22.019Z",
+  "image": "data:image/png;base64,iVBORw0KGgo..."
 }
 ```
 
-Or a stricter version if preferred.
+---
+
+## **🛠 Installation (Dev)**
+
+Clone the project:
+
+```sh
+git clone https://github.com/your-repo/frame-relay
+```
+
+In Figma:
+
+1. Open **Figma → Plugins → Development → Import plugin from manifest**
+2. Select the project folder containing `manifest.json`
+3. Run the plugin from **Plugins → Development → Frame Relay**
 
 ---
 
-## **Installation**
-
-1. Clone or download the plugin folder.
-2. In Figma → **Plugins → Development → Import plugin from manifest**.
-3. Select `manifest.json`.
-
----
-
-## **Usage**
-
-1. Select **one frame** in your Figma file.
-2. Open the plugin.
-3. Enter the static username & password.
-4. Click **Login**.
-5. Click **Send Selected Frame**.
-
-You will see console logs in **Figma → Plugin Console** to help debugging.
-
----
-
-## **Relay Endpoint Requirements**
-
-Your relay must accept raw PNG bytes via:
-
-* **Method:** POST
-* **Content-Type:** `image/png` (optional, since plugin sends only the body)
-* **Body:** PNG binary
-
-Example expected endpoint:
+## **📂 Plugin Structure**
 
 ```
-POST http://your-relay-domain-or-ip:8001/send-image
+/ui
+  index.html   → Webview UI
+code.js        → Plugin core logic
+manifest.json  → Figma plugin config
+icon.png       → Plugin icon (512x512)
 ```
 
 ---
 
-## **Troubleshooting**
+## **🔧 Configuration**
 
-### **“Select exactly one frame”**
+The plugin stores the webhook URL inside Figma’s private plugin storage:
 
-You selected multiple nodes or no frames.
-Choose one frame only.
-
-### **“Failed to send image”**
-
-Possible reasons:
-
-* Relay port not published
-* Wrong relay URL
-* Endpoint not accepting raw bytes
-* Server inaccessible (firewall, local network, swarm node)
-
-### **CSP or network errors**
-
-Ensure the manifest has:
-
-```json
-"networkAccess": {
-  "allowedDomains": ["*"]
-}
+```ts
+figma.clientStorage.setAsync("webhookUrl", url)
 ```
+
+You can always change it by clicking **Alterar URL** in the plugin UI.
+
+---
+
+## **🔐 Security Notes**
+
+* The plugin does **not** log or transmit your webhook URL anywhere except to your selected endpoint.
+* All data stays inside your machine and your server.
+
+---
+
+## **⚙️ Requirements**
+
+* Figma Desktop (browser mode does not support exporting PNG via plugin API).
+* A reachable HTTPS webhook endpoint.
+
+---
+
+## **🤝 Contributing**
+
+Pull requests are welcome. For major changes, open an issue first to discuss what you’d like to improve.
+
+---
+
+## **📄 License**
+
+MIT License — free for commercial and personal use.
+
+---

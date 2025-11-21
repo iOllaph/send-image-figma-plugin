@@ -1,0 +1,16 @@
+<!DOCTYPE html>
+<html>
+<body>
+  <div>
+    <button id="send">Send Selected Frame</button>
+  </div>
+
+<script>
+document.getElementById('send').onclick = () => {
+  parent.postMessage({
+    pluginMessage: { type: 'send' }
+  }, '*');
+};
+</script>
+</body>
+</html>
